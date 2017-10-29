@@ -109,3 +109,63 @@ mysum = mysum + data[i];
 printf("Task %d mysum = %e\n",myid,mysum);
 return(mysum);
 }
+
+
+/**
+
+	bool populated;
+	bool visited;
+	int xcoord;
+	int ycoord;
+	bool northcon;
+	bool southcon;
+	bool eastcon;
+	bool westcon;
+
+	
+    const int nitems=8;
+	int blocklengths[8] = {1,1,1,1,1,1,1,1};
+	MPI_Datatype types[8] = {MPI_INT, MPI_INT,MPI_INT, MPI_INT,MPI_INT, MPI_INT,MPI_INT, MPI_INT};
+	MPI_Datatype mpi_node_type;
+    MPI_Aint offsets[8];	
+	offsets[0] = offsetof(node, (int) populated);
+    offsets[1] = offsetof(node, (int) visited);
+	offsets[2] = offsetof(node,  xcoord);
+    offsets[3] = offsetof(node,  ycoord);
+	offsets[4] = offsetof(node, (int) northcon);
+    offsets[5] = offsetof(node, (int) southcon);
+	offsets[6] = offsetof(node, (int) eastcon);
+    offsets[7] = offsetof(node, (int) westcon);
+	
+    MPI_Type_create_struct(nitems, blocklengths, offsets, types, &mpi_node_type);
+    MPI_Type_commit(&mpi_node_type);
+
+   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if (rank == 0) {
+        car send;
+        send.shifts = 4;
+        send.topSpeed = 100;
+
+        const int dest = 1;
+        MPI_Send(&send,   1, mpi_node_type, dest, tag, MPI_COMM_WORLD);
+
+        printf("Rank %d: sent structure car\n", rank);
+    }
+    if (rank == 1) {
+        MPI_Status status;
+        const int src=0;
+
+        car recv;
+
+        MPI_Recv(&recv,   1, mpi_node_type, src, tag, MPI_COMM_WORLD, &status);
+        printf("Rank %d: Received: shifts = %d topSpeed = %d\n", rank,
+                 recv.shifts, recv.topSpeed);
+    }
+
+    MPI_Type_free(&mpi_car_type);
+    MPI_Finalize();
+
+	
+
+
+**/

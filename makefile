@@ -5,15 +5,18 @@ HEADERS = $(PROJECT).h
 OBJ     = stack.o depthFirstSearch.o lattice.o
 
 
-C99     =  cc -std=c99
+C99     =  mpicc -std=c99
 CFLAGS  =  -fopenmp -Wall -pedantic -g
 
 
+after : $(PROJECT)	
+	syncCluster
 $(PROJECT) : $(OBJ)
 	$(C99) $(CFLAGS) -o $(PROJECT) $(OBJ) -lm
 
 %.o : %.c 
 	$(C99) $(CFLAGS) -c $<
+
 
 clean:
 	        rm -f $(PROJECT) $(OBJ)
