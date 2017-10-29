@@ -180,10 +180,8 @@ int main(int argc,char* argv[]){
  if(mpiRank == 0){   
   time_t t;
   toBroadcast = time(&t);
-  printf("SEED IS - %i \n",toBroadcast);
  }
    MPI_Bcast(&toBroadcast, 1, MPI_INT, 0, MPI_COMM_WORLD);
-  printf("SEED AFTER BROADCAST - %i \n",toBroadcast);
    srand(toBroadcast);
 
 
@@ -217,24 +215,28 @@ int main(int argc,char* argv[]){
 		}
 	}
 
-	if(typemode==1)
+	if(typemode==1)	//Site
 	{
 		node** lattice = generateLatticeSite(size,prob);
 		if(size < 64 && !quietmode)
 		{
 			printgraph(lattice,size,1); 
 		}
-		depthFirstSearch(lattice,size,1);
+		//depthFirstSearch(lattice,size,1);
 	}
 
-	if(typemode==2)
+	if(typemode==2) //Bond
 	{
 		node** lattice = generateLatticeBond(size,prob);
-		if(size < 28 && !quietmode)
+		if( mpiRank == 0 && size < 28 && !quietmode)
 		{
 			printgraph(lattice,size,2);
 		}
-		//depthFirstSearch(lattice,size,2);
+		depthFirstSearchMPI(lattice,size,2);
+		for(int i =0;i<4;i++){}
+		//free(test[0]);
+		//free(test);
 	}
+	MPI_Finalize();
 	return 0;
 }

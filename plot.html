@@ -1,0 +1,70 @@
+<html>
+<head>
+  <meta http-equiv='refresh' content='10' />
+  <script type='text/javascript' src='https://www.google.com/jsapi'></script>
+  <script type='text/javascript'>
+    google.load('visualization', '1.1', {packages: ['corechart','line']});
+    google.setOnLoadCallback(drawChart);
+
+    function drawChart() {
+      var options = {
+        title: 'The Runtime of Lattice program in various conditions',
+        width:  1000,
+        height: 600,
+		vAxis: {
+          title: 'Time (Seconds)'
+        },
+        hAxis: {title: 'Size of Lattice'}
+      };
+      var chart = new google.visualization.LineChart(document.getElementById('linechart_material'));
+      var data = new google.visualization.DataTable();
+data.addColumn('string', 'Length of the lattice (Node x Node)');
+data.addColumn('number', 'Size of Site Lattice with Probability of 0.5 by Single Thread');
+data.addColumn('number', 'Size of Site Lattice with Probability of 0.5 by Multiple Threads');
+data.addColumn('number', 'Size of Bond Lattice with Probability of 0.5 by Single Thread');
+data.addColumn('number', 'Size of Bond Lattice with Probability of 0.5 by Multiple Thread');
+data.addRows([['256',size: 52359
+percolates: true
+
+0.07,size: 52359
+percolates: true
+
+0.04,
+					  size: 65445
+percolates: true
+
+0.07,size: 65445
+percolates: true
+
+0.06
+					  ]]);
+data.addRows([['512',size: 209419
+percolates: true
+
+0.51,size: 209076
+percolates: true
+
+0.17,
+					  size: 261618
+percolates: true
+
+0.52,size: 261618
+percolates: true
+
+0.22
+					  ]]);
+data.addRows([['768',size: 470488
+percolates: true
+
+1.67,size: 470648
+percolates: true
+
+0.43,
+					  size: 588708
+percolates: true
+
+1.95,size: 588705
+percolates: true
+
+0.50
+					  ]]);
