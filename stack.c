@@ -23,6 +23,7 @@ void push(int x, int y, Stack * stack){ //adding an element to the end of the qu
 	}
 	else{
 	stack->start = a;
+	a->next = NULL;
 	}
 }
 
