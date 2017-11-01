@@ -187,7 +187,7 @@ int main(int argc,char* argv[]){
   MPI_Bcast(&toBroadcast, 1, MPI_INT, 0, MPI_COMM_WORLD);
   if(mpiRank != 0){
     printf("SEED AFTER BROADCAST - %i \n",toBroadcast);
-    srand(toBroadcast);
+    srand(/*toBroadcast*/1);
   }
   //Create seed for random number generator
 
