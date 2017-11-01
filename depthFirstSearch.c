@@ -161,8 +161,8 @@ void depthFirstSearchMPI(node** lattice, int size, int siteMode){
 	if(mpiRank == 0){
 		if(size % mpiSize == 0){
 			for(int offset = 1; offset < mpiSize; offset++){
-				MPI_Send(&offset, 1, MPI_INT, offset, offset, MPI_COMM_WORLD);
-				MPI_Send(&visitedMatrix[0][0], size * size, MPI_INT, offset, offset, MPI_COMM_WORLD);
+				MPI_Ssend(&offset, 1, MPI_INT, offset, offset, MPI_COMM_WORLD);
+				MPI_Ssend(&visitedMatrix[0][0], size * size, MPI_INT, offset, offset, MPI_COMM_WORLD);
 			}
 			int offset = mpiSize;
 			MPI_Status status;
@@ -211,8 +211,8 @@ void depthFirstSearchMPI(node** lattice, int size, int siteMode){
 						free(tempPermaRows);
 						free(tempPermaColumns);
 						//printf("POINT5\n");
-						MPI_Send(&offset, 1, MPI_INT, i, i, MPI_COMM_WORLD);
-						MPI_Send(&visitedMatrix[0][0], size * size, MPI_INT, i, i, MPI_COMM_WORLD);
+						MPI_Ssend(&offset, 1, MPI_INT, i, i, MPI_COMM_WORLD);
+						MPI_Ssend(&visitedMatrix[0][0], size * size, MPI_INT, i, i, MPI_COMM_WORLD);
 						offset++;
 						printf("offset increased: %i\n", offset);
 						flag = false;
@@ -293,11 +293,11 @@ void depthFirstSearchMPI(node** lattice, int size, int siteMode){
 				//printf("SENDING VISITED MATRIX\n");
 				tempVisited = visitedMatrix;
 				//send visitedMatrix First, then send the maximum size
-				MPI_Send(&tempVisited[0][0], size * size, MPI_INT, 0, mpiRank, MPI_COMM_WORLD);
+				MPI_Ssend(&tempVisited[0][0], size * size, MPI_INT, 0, mpiRank, MPI_COMM_WORLD);
 				//printf("sending maxsize:	%i\n", maxSize);
-				MPI_Send(&maxSize, 1, MPI_INT, 0, mpiRank, MPI_COMM_WORLD);
-				MPI_Send(&permaColumns[0], size, MPI_INT, 0, mpiRank, MPI_COMM_WORLD);
-				MPI_Send(&permaRows[0], size, MPI_INT, 0, mpiRank, MPI_COMM_WORLD);
+				MPI_Ssend(&maxSize, 1, MPI_INT, 0, mpiRank, MPI_COMM_WORLD);
+				MPI_Ssend(&permaColumns[0], size, MPI_INT, 0, mpiRank, MPI_COMM_WORLD);
+				MPI_Ssend(&permaRows[0], size, MPI_INT, 0, mpiRank, MPI_COMM_WORLD);
 			}
 			else{
 				break;
