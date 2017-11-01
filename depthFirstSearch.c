@@ -118,7 +118,41 @@ void depthFirstSearchMPI(node** lattice, int size, int siteMode){
 	MPI_Bcast(&visitedMatrix[0][0], size * size, MPI_INT, 0, MPI_COMM_WORLD);
 	printf("this thing:     			%i\n",visitedMatrix[0][2]);
 	int chunkSize = size / mpiSize;
-	int offset;
+	int offset = 0;
+	int nextOffset = 0;
+
+	printf("offset:    %i\n", offset);
+	printf("size:    %i\n", size);
+	while(offset < size){
+		printf("offset:    %i\n", offset);
+		if(mpiRank == 0){/*
+			for(int dest = 1; dest < mpiSize; dest++){
+				MPI_Send(&offset, 1, MPI_INT, dest, dest, MPI_COMM_WORLD); //send the sizes
+				offset++; \\increase the offset to select a line to be
+			}*/
+		}
+		MPI_Bcast(&offset, 1, MPI_INT, 0, MPI_COMM_WORLD);
+		offset += mpiRank; // set your offset to be the current offset plus the "nextoffset rank"
+		nextOffset = offset + mpiSize;
+		depthFirstSearchPartial(lattice, visitedMatrix, offset, size, 
+			1, siteMode, permaColumns, permaRows, &maxSize);
+		MPI_Barrier(MPI_COMM_WORLD);
+		// MPI_Allreduce(&visitedMatrix[0][0],&visitedMatrix[0][0], size * size, MPI_INT, MPI_LOR, MPI_COMM_WORLD);
+		for(int i = 0; i < size; i++){
+			for(int j = 0; j < size; j++){
+				MPI_Allreduce(&visitedMatrix[i][j],&visitedMatrix[i][j], 1, MPI_INT, MPI_LOR, MPI_COMM_WORLD);
+			}
+		}
+		MPI_Allreduce(&maxSize,&maxSize, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+		offset = nextOffset;
+
+	}
+	MPI_Barrier(MPI_COMM_WORLD);
+	if(mpiRank == 0){
+		int percolates = checkForPerculation(permaRows,permaColumns,size);
+		printf("size: %i\n\npercolates: %s\n",maxSize ,percolates == 1 ? "true\n":"false\n");
+		printf("FINISHED\n\n\n\n");	
+	}
 
 	//instructions for master only
 			
@@ -158,7 +192,7 @@ void depthFirstSearchMPI(node** lattice, int size, int siteMode){
 					printf("after max: %i\n", maxSize);
 				}				
 			}*/
-	if(mpiRank == 0){
+/*	if(mpiRank == 0){
 		if(size % mpiSize == 0){
 			for(int offset = 1; offset < mpiSize; offset++){
 				MPI_Send(&offset, 1, MPI_INT, offset, offset, MPI_COMM_WORLD);
@@ -274,11 +308,13 @@ void depthFirstSearchMPI(node** lattice, int size, int siteMode){
 			MPI_Abort(MPI_COMM_WORLD, rc);
 			exit(0);
 		}
-	}
+	}*/
+
+
 
 
 	//instructions for slave nodes
-	else{
+/*	else{
 		int offset;
 		while(true){
 			MPI_Status status;
@@ -304,7 +340,7 @@ void depthFirstSearchMPI(node** lattice, int size, int siteMode){
 			}
 		}
 		MPI_Barrier(MPI_COMM_WORLD);
-	}
+	}*/
 	//
 }
 
