@@ -18,6 +18,7 @@ int** visitedMatrix;
 int* raw_data;
 int* tempRawData;
 int mpiSize;
+int mpiRank;
 int** tempVisited;
 
 void siteCheck(int istart, int jstart, node** lattice, int size, Stack *toVisit, int** tempVisited);
@@ -93,7 +94,6 @@ void depthFirstSearchLin(node** lattice, int size, int siteMode){
 
 void depthFirstSearchMPI(node** lattice, int size, int siteMode){
 	printf("starting.........................................");
-	int mpiRank;
 	MPI_Comm_rank( MPI_COMM_WORLD, &mpiRank);
 	MPI_Comm_size( MPI_COMM_WORLD, &mpiSize);
 	printf("we have rank %i\n", mpiRank);
