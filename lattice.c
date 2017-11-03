@@ -119,9 +119,11 @@ return n;
 
 node** generateLatticeSite(int size,double prob){
 
+node* raw_data = malloc(size * size * sizeof(node));
 node** n = (node **) malloc(size * sizeof(node *));
+
 for (int i = 0; i < size; ++i)
-    n[i] = (node*) malloc(size * sizeof(node));
+    n[i] = raw_data + size * i;
  
 for(int i=0;i<size;i++){
   for(int ii=0;ii<size;ii++){
@@ -180,16 +182,11 @@ int main(int argc,char* argv[]){
  if(mpiRank == 0){   
   time_t t;
   toBroadcast = time(&t);
-  printf("SEED IS - %i \n",toBroadcast);
  }
-   MPI_Bcast(&toBroadcast, 1, MPI_INT, 0, MPI_COMM_WORLD);
-  printf("SEED AFTER BROADCAST - %i \n",toBroadcast);
-   srand(toBroadcast);
-
-
-
-
- 
+  MPI_Bcast(&toBroadcast, 1, MPI_INT, 0, MPI_COMM_WORLD);
+  if(mpiRank != 0){
+    srand(toBroadcast);
+  }
   //Create seed for random number generator
 
 
@@ -203,6 +200,7 @@ int main(int argc,char* argv[]){
 				printgraph(lattice,size,1); 
 			}
 			depthFirstSearchLin(lattice,size,1);
+      MPI_Finalize();
 			return 0;
 		}
 		if(typemode==2)
@@ -213,7 +211,8 @@ int main(int argc,char* argv[]){
 				printgraph(lattice,size,2); 
 			}
 			depthFirstSearchLin(lattice,size,2);
-			return 0;
+      MPI_Finalize();
+      return 0;
 		}
 	}
 
@@ -224,7 +223,7 @@ int main(int argc,char* argv[]){
 		{
 			printgraph(lattice,size,1); 
 		}
-		depthFirstSearch(lattice,size,1);
+		depthFirstSearchMPI(lattice, size, 1);
 	}
 
 	if(typemode==2)
@@ -234,7 +233,8 @@ int main(int argc,char* argv[]){
 		{
 			printgraph(lattice,size,2);
 		}
-		//depthFirstSearch(lattice,size,2);
+		depthFirstSearchMPI(lattice,size,2);
 	}
+  MPI_Finalize();
 	return 0;
 }
