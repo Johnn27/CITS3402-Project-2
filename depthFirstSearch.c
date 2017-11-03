@@ -14,6 +14,8 @@ int checkForPerculation(int* rows, int* columns, int size);
 void depthFirstSearchMPI(node** lattice, int size, int siteMode);
 void depthFirstSearchPartial(node** lattice, int** visitedMatrix, int offset, 
 	int size, int chunkSize, int siteMode, int* permaColumns, int* permaRows, int* maxSize, int* percolates);
+
+//integers common 
 int** visitedMatrix;
 int* raw_data;
 int* tempRawData;
@@ -24,7 +26,10 @@ int** tempVisited;
 void siteCheck(int istart, int jstart, node** lattice, int size, Stack *toVisit, int** tempVisited);
 void bondCheck(int istart, int jstart, node** lattice, int size, Stack *toVisit, int** tempVisited);
 
-
+/*
+linear implementation of the depthFirstSearch.
+Returns same results without multithreading and Distributed memory
+*/
 void depthFirstSearchLin(node** lattice, int size, int siteMode){
 	
 	int maxSize = 0;
@@ -93,10 +98,8 @@ void depthFirstSearchLin(node** lattice, int size, int siteMode){
 }
 
 void depthFirstSearchMPI(node** lattice, int size, int siteMode){
-	//printf("starting.........................................");
 	MPI_Comm_rank( MPI_COMM_WORLD, &mpiRank);
 	MPI_Comm_size( MPI_COMM_WORLD, &mpiSize);
-	//printf("we have rank %i\n", mpiRank);
 	int maxSize = 0;
 	int percolates = 0;
 	//create a 2d array using a linear structure
@@ -108,22 +111,12 @@ void depthFirstSearchMPI(node** lattice, int size, int siteMode){
 	//check from the left to the right first
 	int* permaColumns = (int*) malloc(size * sizeof(int));
 	int* permaRows  = (int*) malloc(size * sizeof(int));
-	
 
-
-	/*
-	for the wave system
-	*/
-
-	//send out the visited matrix lattice to all the other machines
-	//MPI_Bcast(&visitedMatrix[0][0], size * size, MPI_INT, 0, MPI_COMM_WORLD);
-	//printf("this thing:     			%i\n",visitedMatrix[0][2]);
 	int chunkSize = size / mpiSize;
 	int offset;
 
 	//instructions for master only
 	if(mpiRank == 0){
-		//printf("%i\n",mpiSize);
 		if(size % mpiSize == 0){
 			
 			offset = chunkSize;
@@ -140,33 +133,11 @@ void depthFirstSearchMPI(node** lattice, int size, int siteMode){
 			for(int i = 0; i < size; i++){
 				tempVisited[i] = tempRawData + size * i;
 			}
-			int tempMax;
-			//receive data back from slaves
-			// for(int dest = 1; dest < mpiSize; dest++){
-			// 	MPI_Status status;
-			// 	//printf("receiving tempVisited.....\n");
-			// 	//MPI_Recv(&tempVisited[0][0], size * size, MPI_INT, dest, 10, MPI_COMM_WORLD, &status);
-			// 	//printf("recieved tempVisited\n");
-			// 	// for(int i = 0; i < size; i++){
-			// 	// 	for(int j = 0; j < size; j++){
-			// 	// 		if(tempVisited[i][j] == 1){
-			// 	// 			visitedMatrix[i][j] = 1;
-			// 	// 		}
-			// 	// 	}
-			// 	// }
-			// 	MPI_Recv(&tempMax, 1, MPI_INT, dest, dest, MPI_COMM_WORLD, &status);
-			// 	//printf("tempMax: %i\n ", tempMax);
-			// 	if(maxSize < tempMax){
-			// 		//printf("before max: %i\n", maxSize);
-			// 		maxSize = tempMax;
-			// 		//printf("after max: %i\n", maxSize);
-			// 	}				
-			// }
 
 		}
 		else{
 			printf("cannot do this! needs to be divisible by number of tasks (for now...)");
-			int rc;
+			int rc = 0;
 			MPI_Abort(MPI_COMM_WORLD, rc);
 			exit(0);
 		}
@@ -177,23 +148,17 @@ void depthFirstSearchMPI(node** lattice, int size, int siteMode){
 	else{
 		MPI_Status status;
 		MPI_Recv(&offset, 1, MPI_INT, 0, mpiRank, MPI_COMM_WORLD, &status);
-		//printf("got it!");
 		int percolates;
 		depthFirstSearchPartial(lattice, visitedMatrix, offset, size, 
 			chunkSize, siteMode, permaColumns, permaRows, &maxSize, &percolates);
-		//printf("depth first search complete........\n");
-		//printf("SENDING VISITED MATRIX\n");
 		tempVisited = visitedMatrix;
-		//MPI_Send(&tempVisited[0][0], size * size, MPI_INT, 0, 10, MPI_COMM_WORLD);
-		//MPI_Send(&percolates, 1, MPI_INT, 0, 10, MPI_COMM_WORLD);
-		//printf("sending maxsize\n");
-		//MPI_Send(&maxSize, 1, MPI_INT, 0, mpiRank, MPI_COMM_WORLD);
-		//printf("DONE\n");
 		MPI_Barrier(MPI_COMM_WORLD);
 	}
 	int finalMaxSize;
+	//collect data back to master to find largest cluster
 	MPI_Reduce(&maxSize, &finalMaxSize, 1, MPI_INT, MPI_MAX, 0, MPI_COMM_WORLD);
 	int finalPercolates;
+	//collect data to master to see if lattice percolates
 	MPI_Reduce(&percolates, &finalPercolates, 1, MPI_INT, MPI_LOR, 0, MPI_COMM_WORLD);
 	if(mpiRank == 0){
 		printf("size: %i\npercolates: %s\n",finalMaxSize,finalPercolates > 0 ? "true\n":"false\n");
@@ -205,7 +170,6 @@ void depthFirstSearchMPI(node** lattice, int size, int siteMode){
 
 void depthFirstSearchPartial(node** lattice, int** visitedMatrix, int offset, 
 	int size, int chunkSize, int siteMode, int* permaColumns, int* permaRows, int* maxSize, int* percolates){
-	//printf("running partial depthFirstSearch\n");
 	#pragma omp parallel
 	{
 		int** tempVisited = (int **) malloc(size * sizeof(int *));
@@ -215,21 +179,18 @@ void depthFirstSearchPartial(node** lattice, int** visitedMatrix, int offset,
 		Stack* toVisit = initStack();
 		int* columns = (int*) malloc(size * sizeof(int));
 		int* rows = (int*) malloc(size * sizeof(int));
-		// printf("POINT 1\n");
-		//splitting things up within the cluster node itself 
+		//splitting the load within the cluster node itself 
 		#pragma omp for
 		for(int j = offset; j < offset + chunkSize; j++){
 			for(int i = 0; i < size; i++){
 				int istart = i;
 				int jstart = j;
-				// printf("POINT 2\n");
 				if(visitedMatrix[istart][jstart] == 0){
-					pushIfNeeded(&lattice[istart][jstart],toVisit,tempVisited); //TAG1
+					pushIfNeeded(&lattice[istart][jstart],toVisit,tempVisited);
 				}
 				int currentSize = 0;
 				columns = (int*) realloc(columns, size * sizeof(int));
 				rows = (int*) realloc(rows, size * sizeof(int));
-				//printf("POINT 3\n");
 				while(!isEmpty(toVisit)){
 					currentSize++;
 				
@@ -239,7 +200,6 @@ void depthFirstSearchPartial(node** lattice, int** visitedMatrix, int offset,
 					jstart = pulled.y;
 					columns[istart] = 1;
 					rows[jstart] = 1;
-					//printf("POINT 4\n");
 					if(siteMode == 1){
 						siteCheck(istart,jstart,lattice,size,toVisit,tempVisited);
 					}
@@ -247,13 +207,11 @@ void depthFirstSearchPartial(node** lattice, int** visitedMatrix, int offset,
 						bondCheck(istart,jstart,lattice,size,toVisit,tempVisited);
 					}
 				}
-				//printf("POINT 5\n");
-				// printf("critical\n");
+				//ensures no corrupt memory
 				#pragma omp critical
 				{
-					//printf("%i\n", currentSize);
+					//iff new max size is found, overwrite the current max size 
 					if(currentSize >= maxSize[0]) {
-						//printf("maxSize overwritten!    %i\n", currentSize);
 						maxSize[0] = currentSize;
 						for(int j = 0; j < size; j++){
 							permaColumns[j] = columns[j];
@@ -265,125 +223,60 @@ void depthFirstSearchPartial(node** lattice, int** visitedMatrix, int offset,
 					columns[j] = 0;
 					rows[j] = 0;
 				}
-				// printf("POINT 6\n");
 			}
 		}
 	}
 
-
+	//check for percolation
 	*percolates = checkForPerculation(permaRows,permaColumns,size);
 
 }
-/*void depthFirstSearch(node** lattice, int size, int siteMode){
-	int maxSize = 0;
-	visitedMatrix = (bool**) malloc(size * sizeof(bool *));
-	for(int i = 0; i < size; i++){
-	visitedMatrix[i] = (bool*) malloc(size * sizeof(bool));
-	}
-	//check from the left to the right first
-	bool* permaColumns = (bool*) malloc(size * sizeof(bool));
-	bool* permaRows  = (bool*) malloc(size * sizeof(bool));
-	#pragma omp parallel 
-	{
-		bool** tempVisited = (bool **) malloc(size * sizeof(bool*));
-		for(int i = 0; i < size; i++){
-			tempVisited[i] = (bool *) malloc(size * sizeof(bool));
-		}
-		Stack* toVisit = initStack();
-		bool* columns = (bool*) malloc(size * sizeof(bool));
-		bool* rows = (bool*) malloc(size * sizeof(bool));
-		#pragma omp for
-		for(int j = 0; j < size; j++){	
-			for(int i = 0; i < size; i++){
-				int istart = i;
-				int jstart = j;
-				if(visitedMatrix[istart][jstart] == false){
-				pushIfNeeded(&lattice[istart][jstart],toVisit,tempVisited);
-				}
-				int currentSize = 0;
-				columns = (bool*) realloc(columns, size * sizeof(bool));
-				rows = (bool*) realloc(rows, size * sizeof(bool));
-				
-				while(!isEmpty(toVisit)){
-					currentSize++;
-				
-					stackNode pulled = pop(toVisit);
-					
-					istart = pulled.x;
-					jstart = pulled.y;
-					columns[istart] = true;
-					rows[jstart] = true;
-					
-					if(siteMode == 1){
-						siteCheck(istart,jstart,lattice,size,toVisit,tempVisited);
-					}
-					else{ 
-						bondCheck(istart,jstart,lattice,size,toVisit,tempVisited);
-					}
-
-				}
-				#pragma omp critical
-				{
-					if(currentSize >= maxSize) {
-						maxSize = currentSize;
-						for(int j = 0; j < size; j++){
-							permaColumns[j] = columns[j];
-							permaRows[j] = rows[j];
-						}
-					}
-				}
-				for(int j = 0; j < size; j++){
-					columns[j] = false;
-					rows[j] = false;
-				}
-
-			}
-		}
-	}
-	
-	bool percolates = checkForPerculation(permaRows,permaColumns,size);
-	printf("size: %i\npercolates: %s\n",maxSize,percolates ? "true\n":"false\n");
-
-}*/
 
 
+/*runs a check of the node surrounding the node at (istart,jstart)
+and adds them to the stack if they are unvisited and populated
+Used for when lattice is generated on a site population 
+*/
 void siteCheck(int istart, int jstart, node** lattice, int size, Stack *toVisit, int** tempVisited){
 	//check north
-				int ii = istart;
-				int jj = jstart;
-				ii--;
-				if(ii == -1 ){
-				ii = size - 1;	
-				}
-				pushIfNeeded(&lattice[ii][jj],toVisit,tempVisited);
-				ii++;
-				
-				//check south
-				ii++;
-				ii = ii % size;
-				pushIfNeeded(&lattice[ii][jj], toVisit,tempVisited);
-				ii--;
+	int ii = istart;
+	int jj = jstart;
+	ii--;
+	if(ii == -1 ){
+	ii = size - 1;	
+	}
+	pushIfNeeded(&lattice[ii][jj],toVisit,tempVisited);
+	ii++;
+	
+	//check south
+	ii++;
+	ii = ii % size;
+	pushIfNeeded(&lattice[ii][jj], toVisit,tempVisited);
+	ii--;
 
-				
-				//check east
-				ii = istart;
-				jj = jstart;
-				jj++;
-				jj = jj % size;
-				pushIfNeeded(&lattice[ii][jj], toVisit,tempVisited);
-				jj--;
-				
-				//check west
-				ii = istart;
-				jj = jstart;
-				jj--;
-				if(jj == -1 ){
-				jj = size-1;	
-				}
-				pushIfNeeded(&lattice[ii][jj], toVisit,tempVisited);
-				jj++;
+	
+	//check east
+	ii = istart;
+	jj = jstart;
+	jj++;
+	jj = jj % size;
+	pushIfNeeded(&lattice[ii][jj], toVisit,tempVisited);
+	jj--;
+	
+	//check west
+	ii = istart;
+	jj = jstart;
+	jj--;
+	if(jj == -1 ){
+	jj = size-1;	
+	}
+	pushIfNeeded(&lattice[ii][jj], toVisit,tempVisited);
+	jj++;
 }
-
+/*runs a check of the node surrounding the node at (istart,jstart)
+and adds them to the stack if they are unvisited and populated
+Used for when lattice is generated on bond population 
+*/
 void bondCheck(int istart, int jstart, node** lattice, int size, Stack *toVisit, int** tempVisited){
 	//check north
 	if(lattice[istart][jstart].northcon){
@@ -415,7 +308,7 @@ void bondCheck(int istart, int jstart, node** lattice, int size, Stack *toVisit,
 		pushIfNeeded(&lattice[special][jstart], toVisit,tempVisited);
 	}
 }
-
+//checks for percolation
 int checkForPerculation(int* rows, int* columns, int size){
 	int allTrue = 1;
 	for(int i = 0; i < size; i++){
@@ -442,7 +335,6 @@ void pushIfNeeded(node * theNode, Stack * toVisit, int** tempVisited){ //TAG2
 			theNode->visited = true;
 			visitedMatrix[theNode->xcoord][theNode->ycoord] = 1;
 			tempVisited[theNode->xcoord][theNode->ycoord] = 1;
-			//printf("pushed\n");
 			push(theNode->xcoord, theNode->ycoord, toVisit);
 		}
 }
@@ -451,7 +343,6 @@ int checkIfAvailable(node toCheck, int** temp){
 	if(temp[toCheck.xcoord][toCheck.ycoord] == 0){
 		if(toCheck.populated) return 1;
 	}
-	//else printf("not available");
 	return 0;
 }
 
